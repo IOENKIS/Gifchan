@@ -6,83 +6,60 @@
 //
 
 import SwiftUI
-import CoreData
 
-struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
-
+struct GifView: View {
+    let prompts: [String] = ["trends", "cats and dogs", "memes"]
+    @ObservedObject var viewModel = GifViewModel()
     var body: some View {
         NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+            VStack{
+                ScrollView(){
+                    ForEach(prompts, id: \.self) { prompt in
+                        GifSectionView(title: prompt, gifURLs: viewModel.gifURLs[prompt] ?? [])
                     }
                 }
             }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            .navigationTitle("Gifchan GIF's")
+            .onAppear {
+                viewModel.fetchAllGifURLs(prompts: prompts)
             }
         }
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
+// Окремий компонент для кожного ряду GIF
+struct GifSectionView: View {
+    let title: String
+    let gifURLs: [String]
 
-#Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(title.capitalized)
+                .font(.headline)
+                .padding([.bottom, .leading], 10)
+            
+            HStack {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack{
+                        ForEach(gifURLs, id: \.self) { url in
+                            GifImageView(gifURL: url)
+                                .frame(height: 150)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .shadow(radius: 5)
+                        }
+                    }
+                    .padding()
+                }
+                Spacer()
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(lineWidth: 2)
+                    .fill(Color.black)
+            )
+            .padding(10)
+            .frame(height: 150)
+        }
+        .padding(.vertical, 20)
+    }
 }
