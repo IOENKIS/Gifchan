@@ -11,6 +11,7 @@ import UIKit
 
 struct GifImageView: UIViewRepresentable {
     let gifURL: String
+    static let cache = NSCache<NSString, UIImage>()
 
     func makeUIView(context: Context) -> UIImageView {
         let imageView = UIImageView()
@@ -20,15 +21,18 @@ struct GifImageView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIImageView, context: Context) {
-        DispatchQueue.global(qos: .userInitiated).async {
+        if let cachedImage = GifImageView.cache.object(forKey: gifURL as NSString) {
+            uiView.image = cachedImage
+            return
+        }
+
+        DispatchQueue.global(qos: .background).async {
             if let gifImage = UIImage.gif(url: gifURL) {
+                GifImageView.cache.setObject(gifImage, forKey: gifURL as NSString)
                 DispatchQueue.main.async {
                     uiView.image = gifImage
                 }
-            } else {
-                print("❌ SwiftGif: Не вдалося завантажити GIF: \(gifURL)")
             }
         }
     }
 }
-

@@ -12,7 +12,7 @@ struct GifchanApp: App {
 
     var body: some Scene {
         WindowGroup {
-            GifView()
+            MainView()
         }
     }
 }
