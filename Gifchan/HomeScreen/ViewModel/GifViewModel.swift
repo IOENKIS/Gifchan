@@ -10,7 +10,7 @@ import Foundation
 
 class GifViewModel: ObservableObject{
     @Published var gifURLs: [String: [String]] = [:]
-    let prompts: [String] = ["trends", "cats and dogs", "memes", "programming"]
+    let prompts: [String] = ["most popular", "animals", "memes", "programming"]
     let apiKey = "dmes1vSx87yb6L9oyhCvhF9ZCipRdMPx"
     
     init() {
@@ -18,7 +18,7 @@ class GifViewModel: ObservableObject{
     }
     
     func fetchGifURLs(query: String, limit: Int = 10, completion: @escaping ([String]) -> Void) {
-        let urlString = "https://api.giphy.com/v1/gifs/search?api_key=\(apiKey)&q=\(query)&limit=\(limit)&offset=\(Int.random(in: 0..<50))&rating=g"
+        let urlString = "https://api.giphy.com/v1/gifs/search?api_key=\(apiKey)&q=\(query)&limit=\(limit)&offset=\(Int.random(in: 0..<200))&rating=g"
         guard let url = URL(string: urlString) else {
             print("❌ Помилка формування API-запиту")
             completion([])
@@ -52,7 +52,6 @@ class GifViewModel: ObservableObject{
         task.resume()
     }
 
-    // Виконує всі запити
     func fetchAllGifURLs() {
         for prompt in prompts {
             fetchGifURLs(query: prompt) { urls in
@@ -62,5 +61,10 @@ class GifViewModel: ObservableObject{
                 }
             }
         }
+    }
+    
+    func refreshGifs() {
+        gifURLs.removeAll()
+        fetchAllGifURLs()
     }
 }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GifView: View {
     @StateObject var viewModel = GifViewModel()
+    @State private var isRotating = false
     var body: some View {
         NavigationView {
             ZStack{
@@ -23,6 +24,24 @@ struct GifView: View {
                 }
                 .padding(.vertical, 20)
                 .navigationTitle("Gifchan GIF's")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.6)) {
+                                isRotating.toggle()
+                            }
+                            viewModel.refreshGifs()
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                isRotating = false
+                            }
+                        }) {
+                            Image(systemName: "arrow.trianglehead.clockwise")
+                                .foregroundStyle(.stroke)
+                                .rotationEffect(.degrees(isRotating ? 360 : 0))
+                        }
+                    }
+                }
             }
         }
     }

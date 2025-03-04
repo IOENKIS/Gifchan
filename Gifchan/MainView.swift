@@ -40,11 +40,3 @@ struct EditorView: View {
             .navigationTitle("Favorites")
     }
 }
-
-struct SavingsView: View {
-    var body: some View {
-        Text("Settings")
-            .font(.largeTitle)
-            .navigationTitle("Settings")
-    }
-}

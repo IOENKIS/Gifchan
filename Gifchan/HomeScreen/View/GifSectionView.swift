@@ -29,10 +29,12 @@ struct GifSectionView: View {
                             }
                         } else {
                             ForEach(gifURLs, id: \.self) { url in
-                                GifImageView(gifURL: url)
-                                    .frame(height: 200)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 5)
+                                NavigationLink(destination: GifDetailView(gifURL: url)) {
+                                    GifImageView(gifURL: url)
+                                        .frame(height: 200)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .shadow(radius: 5)
+                                }
                             }
                         }
                     }
