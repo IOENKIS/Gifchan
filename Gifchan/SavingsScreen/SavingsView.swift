@@ -32,7 +32,7 @@ struct SavingsView: View {
                 if isFavorite {
                     FavoritesView()
                 }else{
-                    //
+//                    MadeView()
                 }
             }
             .navigationTitle("Savings")

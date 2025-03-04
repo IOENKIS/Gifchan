@@ -14,19 +14,16 @@ struct FavoritesView: View {
     var body: some View {
         VStack {
             if favorites.isEmpty {
+                Spacer()
                 Text("No favorite GIFs yet 😢")
                     .font(.headline)
                     .foregroundColor(.gray)
                     .padding()
+                Spacer()
             } else {
                 ScrollView {
                     VStack {
-                        ForEach(favorites, id: \.self) { gif in
-                            GifImageView(gifURL: gif.url ?? "")
-                                .frame(height: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(radius: 5)
-                        }
+                        favoriteGifList
                     }
                     .padding()
                 }
@@ -35,6 +32,19 @@ struct FavoritesView: View {
         .navigationTitle("Favorites")
         .onAppear {
             favorites = CoreDataManager.shared.fetchFavorites()
+        }
+    }
+
+    private var favoriteGifList: some View {
+        ForEach(favorites, id: \.id) { gif in
+            if let gifURL = gif.url {
+                NavigationLink(destination: GifDetailView(gifURL: gifURL)) {
+                    GifImageView(gifURL: gifURL)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .shadow(radius: 5)
+                }
+            }
         }
     }
 }

@@ -9,69 +9,127 @@ import SwiftUI
 
 struct GifDetailView: View {
     let gifURL: String
-    @State private var isFavorite = false
-    @State private var isReference = false
+    @StateObject private var viewModel = GifDetailViewModel()
 
     var body: some View {
-        VStack {
-            GifImageView(gifURL: gifURL)
-                .frame(width: 300, height: 300)
-                .clipShape(RoundedRectangle(cornerRadius: 15))
-                .shadow(radius: 10)
-                .padding()
-
-            VStack(spacing: 20) {
-                Button(action: {
-                    isFavorite.toggle()
-                    if isFavorite {
-                        CoreDataManager.shared.addToFavorites(gifURL: gifURL)
-                    } else {
-                        CoreDataManager.shared.removeFromFavorites(gifURL: gifURL)
-                    }
-                }) {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(isFavorite ? Color.black : Color.clear)
-                        .frame(height: 50)
-                        .overlay(
-                            Label("Add to Favorite", systemImage: isFavorite ? "star.fill" : "star")
-                                .foregroundColor(isFavorite ? .white : .black)
-                                .padding()
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.black, lineWidth: 2)
-                        )
-                        .animation(.easeInOut(duration: 0.2), value: isFavorite)
+        ZStack{
+            VStack {
+                GifImageView(gifURL: gifURL)
+                    .frame(width: 300, height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .shadow(radius: 10)
+                    .padding()
+                
+                VStack(spacing: 20) {
+                    buttonForDetail(
+                        isActive: viewModel.isFavorite,
+                        action: { viewModel.toggleFavorite(for: gifURL) },
+                        title: "Add to Favorite",
+                        activeIcon: "heart.fill",
+                        inactiveIcon: "heart"
+                    )
+                    
+                    buttonForDetail(
+                        isActive: viewModel.isReference,
+                        action: { viewModel.toggleReference() },
+                        title: "Take as Reference",
+                        activeIcon: "pencil.circle.fill",
+                        inactiveIcon: "pencil.circle"
+                    )
+                    
+                    buttonForDetail(
+                        isActive: false,
+                        action: { viewModel.downloadGif(from: gifURL) },
+                        title: "Download GIF",
+                        activeIcon: "arrow.down.circle.fill",
+                        inactiveIcon: "arrow.down.circle"
+                    )
                 }
-
-                Button(action: {
-                    isReference.toggle()
-                }) {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(isReference ? Color.black : Color.clear)
-                        .frame(height: 50)
-                        .overlay(
-                            Label("Take as Reference", systemImage: "pencil")
-                                .foregroundColor(isReference ? .white : .black)
-                                .padding()
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.black, lineWidth: 2)
-                        )
-                        .animation(.easeInOut(duration: 0.2), value: isReference)
-                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            if viewModel.isLoading {
+                Color.black.opacity(0.4)
+                    .edgesIgnoringSafeArea(.all)
+                VStack {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(2)
+                    Text("Downloading GIF...")
+                        .foregroundColor(.white)
+                        .font(.headline)
+                        .padding(.top, 10)
+                }
+                .frame(width: 200, height: 150)
+                .background(Color.black.opacity(0.8))
+                .cornerRadius(15)
+            }
+            
+            if viewModel.showDownloadToast {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.white)
+                            .font(.title2)
+                        Text("GIF successfully saved!")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                    }
+                    .padding()
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .shadow(radius: 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.showDownloadToast)
+                }
+                .padding(.bottom, 50)
+            }
         }
         .navigationTitle("GIF Details")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            checkIfFavorite()
+            viewModel.checkIfFavorite(for: gifURL)
+        }
+        .alert(isPresented: $viewModel.showDownloadAlert) {
+            Alert(
+                title: Text("Download Complete"),
+                message: Text("GIF has been saved to your Photos"),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .alert(isPresented: $viewModel.showPermissionAlert) {
+            Alert(
+                title: Text("Access denied"),
+                message: Text("To save GIFs, allow access to Photos in Settings"),
+                primaryButton: .default(Text("Settings"), action: {
+                    viewModel.openSettings()
+                }),
+                secondaryButton: .cancel(Text("Close"))
+            )
         }
     }
 
-    private func checkIfFavorite() {
-        isFavorite = CoreDataManager.shared.isGifFavorite(gifURL: gifURL)
+    func buttonForDetail(
+        isActive: Bool,
+        action: @escaping () -> Void,
+        title: String,
+        activeIcon: String,
+        inactiveIcon: String?
+    ) -> some View {
+        Button(action: action) {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(isActive ? Color.black : Color.clear)
+                .frame(height: 50)
+                .overlay(
+                    Label(title, systemImage: (isActive ? activeIcon : inactiveIcon) ?? activeIcon)
+                        .foregroundColor(isActive ? .white : .black)
+                        .padding()
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.black, lineWidth: 2)
+                )
+                .animation(.easeInOut(duration: 0.2), value: isActive)
+        }
     }
 }
