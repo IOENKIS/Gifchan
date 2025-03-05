@@ -52,10 +52,10 @@ struct GifDetailView: View {
                     .edgesIgnoringSafeArea(.all)
                 VStack {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .progressViewStyle(CircularProgressViewStyle(tint: .background))
                         .scaleEffect(2)
                     Text("Downloading GIF...")
-                        .foregroundColor(.white)
+                        .foregroundColor(.background)
                         .font(.headline)
                         .padding(.top, 10)
                 }
@@ -69,14 +69,14 @@ struct GifDetailView: View {
                     Spacer()
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.white)
+                            .foregroundColor(.background)
                             .font(.title2)
                         Text("GIF successfully saved!")
-                            .foregroundColor(.white)
+                            .foregroundColor(.background)
                             .font(.headline)
                     }
                     .padding()
-                    .background(Color.black.opacity(0.8))
+                    .background(Color.stroke.opacity(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 15))
                     .shadow(radius: 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -118,16 +118,16 @@ struct GifDetailView: View {
     ) -> some View {
         Button(action: action) {
             RoundedRectangle(cornerRadius: 20)
-                .fill(isActive ? Color.black : Color.clear)
+                .fill(isActive ? Color.stroke : Color.clear)
                 .frame(height: 50)
                 .overlay(
                     Label(title, systemImage: (isActive ? activeIcon : inactiveIcon) ?? activeIcon)
-                        .foregroundColor(isActive ? .white : .black)
+                        .foregroundColor(isActive ? .background : .stroke)
                         .padding()
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.black, lineWidth: 2)
+                        .stroke(Color.stroke, lineWidth: 2)
                 )
                 .animation(.easeInOut(duration: 0.2), value: isActive)
         }

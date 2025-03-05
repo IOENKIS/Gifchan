@@ -27,3 +27,7 @@ struct GifImages: Codable {
 struct GifImageDetails: Codable {
     let url: String
 }
+
+struct TrendingSearchResponse: Codable {
+    let data: [String]
+}
