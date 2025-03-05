@@ -24,6 +24,8 @@ struct AdaptiveGifGridView: View {
                             .frame(width: gifSize, height: gifSize)
                             .aspectRatio(contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .contentShape(Rectangle())
+                            .simultaneousGesture(TapGesture())
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
