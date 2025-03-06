@@ -60,7 +60,7 @@ struct GifDetailView: View {
                         .padding(.top, 10)
                 }
                 .frame(width: 200, height: 150)
-                .background(Color.black.opacity(0.8))
+                .background(Color.stroke.opacity(0.8))
                 .cornerRadius(15)
             }
             
