@@ -7,5 +7,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSDocumentsDirectoryUsageDescription</key>
+	<string>Цей додаток потребує доступу до файлів для створення GIF.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
 </dict>
 </plist>

@@ -36,11 +36,3 @@ struct MainView: View {
     }
 }
 
-// Порожні вкладки для демонстрації
-struct EditorView: View {
-    var body: some View {
-        Text("Favorites")
-            .font(.largeTitle)
-            .navigationTitle("Favorites")
-    }
-}

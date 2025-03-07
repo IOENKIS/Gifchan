@@ -5,13 +5,12 @@
 //  Created by Ivan Kisilov on 03.03.2025.
 //
 
-
 import SwiftUI
 import UIKit
 
 struct GifImageView: UIViewRepresentable {
     let gifURL: String
-    static let cache = NSCache<NSString, UIImage>()
+    static let cache = NSCache<NSString, NSData>()
 
     func makeUIView(context: Context) -> UIImageView {
         let imageView = UIImageView()
@@ -21,15 +20,21 @@ struct GifImageView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIImageView, context: Context) {
-        if let cachedImage = GifImageView.cache.object(forKey: gifURL as NSString) {
-            uiView.image = cachedImage
+        if let cachedData = GifImageView.cache.object(forKey: gifURL as NSString),
+           let gifImage = UIImage.gif(data: cachedData as Data) {
+            uiView.image = gifImage
             return
         }
 
         DispatchQueue.global(qos: .background).async {
-            if let gifImage = UIImage.gif(url: gifURL) {
-                GifImageView.cache.setObject(gifImage, forKey: gifURL as NSString)
-                DispatchQueue.main.async {
+            guard let url = URL(string: self.gifURL), let gifData = try? Data(contentsOf: url) else {
+                print("❌ Помилка завантаження GIF за URL: \(self.gifURL)")
+                return
+            }
+
+            DispatchQueue.main.async {
+                if let gifImage = UIImage.gif(data: gifData) {
+                    GifImageView.cache.setObject(gifData as NSData, forKey: self.gifURL as NSString)
                     uiView.image = gifImage
                 }
             }
