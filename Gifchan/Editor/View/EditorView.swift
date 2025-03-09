@@ -24,12 +24,12 @@ struct EditorView: View {
                     }
                 } else if let gifURL = viewModel.gifURL {
                     GifImageView(gifURL: gifURL.absoluteString)
-                        .frame(width: 300, height: 300)
+                        .frame(width: 500, height: 500)
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .shadow(radius: 5)
                         .padding()
                 } else {
-                    Text("Choose a GIF or video")
+                    Text("Select the video to convert to GIF")
                         .foregroundColor(.gray)
                         .padding()
                 }
@@ -41,7 +41,7 @@ struct EditorView: View {
                         .stroke(Color.stroke, lineWidth: 2)
                         .frame(height: 50)
                         .overlay(
-                            Label("Upload a GIF or video", systemImage: "photo.fill")
+                            Label("Download video", systemImage: "photo.fill")
                                 .foregroundColor(.stroke)
                                 .padding()
                         )

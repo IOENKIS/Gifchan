@@ -5,133 +5,148 @@
 //  Created by Ivan Kisilov on 07.03.2025.
 //
 
-@preconcurrency import SwiftUI
+import SwiftUI
 import AVFoundation
+import MobileCoreServices
+import ImageIO
 import UniformTypeIdentifiers
 
-@MainActor
 class EditorViewModel: ObservableObject {
     @Published var selectedFileURL: URL? {
         didSet {
-            handleSelectedFile()
+            print("✅ EditorViewModel: Отримано відео - \(selectedFileURL?.absoluteString ?? "nil")")
+            if selectedFileURL != nil {
+                convertVideoToGif()
+            }
         }
     }
-    @Published var gifURL: URL?
-    @Published var isProcessing = false
+    @Published var gifURL: URL? {
+        didSet {
+            print("🔄 Оновлено gifURL: \(gifURL?.absoluteString ?? "nil")")
+        }
+    }
     @Published var showLoader = false
 
-    private func handleSelectedFile() {
-        guard let fileURL = selectedFileURL else { return }
-
-        DispatchQueue.main.async {
-            self.gifURL = nil
-            self.isProcessing = true
-            self.showLoader = true
-        }
-
-        Task {
-            await convertVideoToGIF(videoURL: fileURL)
-        }
-    }
-
-    func convertVideoToGIF(videoURL: URL) async {
-        let tempGifURL = FileManager.default.temporaryDirectory.appendingPathComponent("converted.gif")
-        let asset = AVURLAsset(url: videoURL)
-        
-        guard let track = asset.tracks(withMediaType: .video).first else {
-            print("❌ Не вдалося отримати трек відео")
+    func convertVideoToGif() {
+        guard let videoURL = selectedFileURL else {
+            print("❌ Немає вибраного відеофайлу")
             return
         }
-
-        let originalFPS = track.nominalFrameRate
-        let videoSize = track.naturalSize.applying(track.preferredTransform) // ✅ Отримуємо оригінальний розмір відео
-        var duration = asset.duration.seconds
-        let optimizedFPS: Float = min(originalFPS, 20) // 🔥 Обмежуємо FPS до 20
-
-        if duration > 10 {
-            print("⚠️ Відео довше 10 секунд, обрізаємо...")
-            duration = 10
+        
+        // Видаляємо попередню GIF перед створенням нової
+        if let existingGifURL = gifURL {
+            do {
+                try FileManager.default.removeItem(at: existingGifURL)
+                print("🗑 Видалено попередню GIF: \(existingGifURL)")
+            } catch {
+                print("⚠️ Помилка видалення попередньої GIF: \(error)")
+            }
         }
-
-        let stepTime = 1.0 / Double(optimizedFPS)
-        let totalFrames = Int(duration * Double(optimizedFPS))
-        var timeValues: [NSValue] = []
-        var currentTime: Double = 0.0
-
-        while currentTime < duration {
-            let time = CMTime(seconds: currentTime, preferredTimescale: 600)
-            timeValues.append(NSValue(time: time))
-            currentTime += stepTime
+        
+        // Очищаємо gifURL, щоб змусити UI оновитися
+        DispatchQueue.main.async {
+            self.gifURL = nil
         }
-
+        
+        showLoader = true
+        print("ℹ️ Початок конвертації відео у GIF")
+        
+        let asset = AVURLAsset(url: videoURL)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
-        generator.maximumSize = videoSize // ✅ Масштабуємо GIF до розміру відео
-
-        guard let destination = CGImageDestinationCreateWithURL(tempGifURL as CFURL, UTType.gif.identifier as CFString, totalFrames, nil) else {
-            print("❌ Не вдалося створити GIF файл")
+        
+        if let videoTrack = asset.tracks(withMediaType: .video).first {
+            let videoSize = videoTrack.naturalSize
+            if videoSize.width > 0 && videoSize.height > 0 {
+                let maxSize: CGFloat = 500 // Збільшено максимальний розмір для кращої якості
+                let aspectRatio = videoSize.width / videoSize.height
+                
+                let newSize: CGSize
+                if videoSize.width > videoSize.height {
+                    newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+                } else {
+                    newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+                }
+                
+                generator.maximumSize = newSize
+                print("ℹ️ Розмір GIF після адаптації: \(newSize.width)x\(newSize.height)")
+            } else {
+                print("⚠️ Попередження: Неможливо отримати розмір відео")
+            }
+        } else {
+            print("⚠️ Попередження: Відеотрек не знайдено")
+        }
+        
+        let frameRate: Int = 20 // Збільшено кількість кадрів за секунду для плавності
+        let duration = CMTimeGetSeconds(asset.duration)
+        let totalFrames = Int(duration * Double(frameRate))
+        let delayBetweenFrames: TimeInterval = 1.0 / Double(frameRate)
+        
+        print("ℹ️ Загальна тривалість відео: \(duration) секунд")
+        print("ℹ️ Очікувана кількість кадрів: \(totalFrames)")
+        
+        var timeValues: [NSValue] = []
+        for frameNumber in 0..<totalFrames {
+            let seconds = TimeInterval(frameNumber) * delayBetweenFrames
+            let time = CMTime(seconds: seconds, preferredTimescale: Int32(NSEC_PER_SEC))
+            timeValues.append(NSValue(time: time))
+        }
+        
+        let gifFilename = "converted.gif"
+        let gifURL = FileManager.default.temporaryDirectory.appendingPathComponent(gifFilename)
+        
+        guard let destination = CGImageDestinationCreateWithURL(gifURL as CFURL, UTType.gif.identifier as CFString, totalFrames, nil) else {
+            print("❌ Помилка створення CGImageDestination")
+            showLoader = false
             return
         }
-
-        let gifProperties = [
-            kCGImagePropertyGIFDictionary: [
-                kCGImagePropertyGIFLoopCount: 0 // 🔄 Безкінечна анімація
+        
+        let fileProperties: [String: Any] = [
+            kCGImagePropertyGIFDictionary as String: [
+                kCGImagePropertyGIFLoopCount as String: 0
             ]
-        ] as CFDictionary
-        CGImageDestinationSetProperties(destination, gifProperties)
-
-        let frameProperties = [
-            kCGImagePropertyGIFDictionary: [
-                kCGImagePropertyGIFDelayTime: max(0.03, 1.0 / 20.0) // 🛠 Мінімальна затримка між кадрами
+        ]
+        CGImageDestinationSetProperties(destination, fileProperties as CFDictionary)
+        print("ℹ️ Встановлено параметри GIF")
+        
+        let frameProperties: [String: Any] = [
+            kCGImagePropertyGIFDictionary as String: [
+                kCGImagePropertyGIFDelayTime: delayBetweenFrames
             ]
-        ] as CFDictionary
-
-        let dispatchGroup = DispatchGroup()
-        var framesProcessed = 0
-
-        print("📸 Починаємо обробку \(totalFrames) кадрів...")
-
-        for timeValue in timeValues {
-            dispatchGroup.enter()
-
-            generator.generateCGImagesAsynchronously(forTimes: [timeValue]) { (requestedTime, resultingImage, actualTime, result, error) in
-                defer { dispatchGroup.leave() }
-
-                if let error = error {
-                    print("⚠️ Помилка генерації кадру для \(requestedTime.seconds) сек: \(error.localizedDescription)")
-                    return
-                }
-
-                guard let resultingImage = resultingImage else {
-                    print("⚠️ Не отримано зображення для часу \(requestedTime.seconds) сек")
-                    return
-                }
-
-                DispatchQueue.global(qos: .userInitiated).async {
-                    CGImageDestinationAddImage(destination, resultingImage, frameProperties)
-                    DispatchQueue.main.async {
-                        framesProcessed += 1
-                        print("📸 Додано кадр \(framesProcessed)/\(totalFrames)")
-                    }
-                }
-            }
-        }
-
-        dispatchGroup.notify(queue: .main) {
-            if framesProcessed == 0 {
-                print("❌ У GIF не було додано жодного кадру!")
+        ]
+        
+        print("ℹ️ Початок створення кадрів GIF")
+        var addedFrames = 0
+        
+        generator.generateCGImagesAsynchronously(forTimes: timeValues) { (requestedTime, image, actualTime, result, error) in
+            if let error = error {
+                print("❌ Помилка отримання кадру на \(requestedTime.seconds) с: \(error.localizedDescription)")
                 return
             }
-
-            print("🎥 Готово! GIF створено. Кадрів: \(framesProcessed)/\(totalFrames)")
-            CGImageDestinationFinalize(destination)
-
-            DispatchQueue.main.async {
-                self.gifURL = tempGifURL
-                self.showLoader = false
-                self.isProcessing = false
+            
+            guard let image = image else {
+                print("❌ Отриманий кадр є nil на \(requestedTime.seconds) с")
+                return
+            }
+            
+            CGImageDestinationAddImage(destination, image, frameProperties as CFDictionary)
+            addedFrames += 1
+            print("✅ Додано кадр у GIF (\(addedFrames)/\(totalFrames))")
+            
+            if addedFrames == totalFrames {
+                print("ℹ️ Всі кадри додані, фіналізація GIF")
+                let success = CGImageDestinationFinalize(destination)
+                DispatchQueue.main.async {
+                    self.showLoader = false
+                    if success {
+                        self.gifURL = gifURL
+                        print("✅ GIF успішно створено: \(gifURL)")
+                    } else {
+                        print("❌ Помилка при завершенні створення GIF")
+                    }
+                }
             }
         }
     }
