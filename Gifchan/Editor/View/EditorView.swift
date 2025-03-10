@@ -10,47 +10,78 @@ import SwiftUI
 struct EditorView: View {
     @StateObject private var viewModel = EditorViewModel()
     @State private var showVideoPicker = false
-
+    @State private var showSaveConfirmation = false
     var body: some View {
         NavigationView {
             VStack {
                 if viewModel.showLoader {
-                    VStack {
-                        ProgressView("Processing GIF...")
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .padding()
-                        Text("This may take a few seconds.")
-                            .foregroundColor(.gray)
-                    }
+                    ProgressView("GIF processing...")
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .padding()
                 } else if let gifURL = viewModel.gifURL {
                     GifImageView(gifURL: gifURL.absoluteString)
-                        .frame(width: 500, height: 500)
+                        .frame(width: 400, height: 400)
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .shadow(radius: 5)
                         .padding()
+                    
+                    HStack {
+                        Button(action: {
+                            viewModel.saveGif()
+                            showSaveConfirmation = true
+                         }) {
+                             RoundedRectangle(cornerRadius: 15)
+                                 .stroke(Color.stroke, lineWidth: 2)
+                                 .frame(height: 50)
+                                 .overlay(
+                                    Text("Save")
+                                        .foregroundColor(.stroke)
+                                        .padding()
+                                 )
+                         }
+                         .padding()
+                        
+                        Button(action: {
+                            viewModel.deleteGif()
+                         }) {
+                             RoundedRectangle(cornerRadius: 15)
+                                 .stroke(Color.stroke, lineWidth: 2)
+                                 .frame(height: 50)
+                                 .overlay(
+                                    Text("Delete")
+                                         .foregroundColor(.stroke)
+                                         .padding()
+                                 )
+                         }
+                         .padding()
+                    }
                 } else {
-                    Text("Select the video to convert to GIF")
-                        .foregroundColor(.gray)
-                        .padding()
+                    Button(action: {
+                        showVideoPicker = true
+                     }) {
+                         RoundedRectangle(cornerRadius: 15)
+                             .stroke(Color.stroke, lineWidth: 2)
+                             .frame(height: 50)
+                             .overlay(
+                                 Label("Upload a GIF or video", systemImage: "photo.fill")
+                                     .foregroundColor(.stroke)
+                                     .padding()
+                             )
+                     }
+                     .padding()
+                     .sheet(isPresented: $showVideoPicker) {
+                         VideoPicker(selectedURL: $viewModel.selectedFileURL)
+                     }
                 }
-
-                Button(action: {
-                    showVideoPicker = true
-                }) {
-                    RoundedRectangle(cornerRadius: 15)
-                        .stroke(Color.stroke, lineWidth: 2)
-                        .frame(height: 50)
-                        .overlay(
-                            Label("Download video", systemImage: "photo.fill")
-                                .foregroundColor(.stroke)
-                                .padding()
-                        )
-                }
-                .padding()
+                NavigationLink(destination: VideoPreviewView(viewModel: viewModel), isActive: $viewModel.showVideoPreview) { EmptyView() }
             }
             .navigationTitle("Create GIF")
-            .sheet(isPresented: $showVideoPicker) {
-                VideoPicker(selectedURL: $viewModel.selectedFileURL)
+            .alert(isPresented: $showSaveConfirmation) {
+                Alert(
+                    title: Text("GIF Saved"),
+                    message: Text("Your GIF has been successfully saved."),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AVKit
 import AVFoundation
 import MobileCoreServices
 import ImageIO
@@ -14,26 +15,21 @@ import UniformTypeIdentifiers
 class EditorViewModel: ObservableObject {
     @Published var selectedFileURL: URL? {
         didSet {
-            print("✅ EditorViewModel: Отримано відео - \(selectedFileURL?.absoluteString ?? "nil")")
             if selectedFileURL != nil {
-                convertVideoToGif()
+                DispatchQueue.main.async {
+                    self.showVideoPreview = true
+                }
             }
         }
     }
-    @Published var gifURL: URL? {
-        didSet {
-            print("🔄 Оновлено gifURL: \(gifURL?.absoluteString ?? "nil")")
-        }
-    }
+    @Published var gifURL: URL?
     @Published var showLoader = false
-
-    func convertVideoToGif() {
-        guard let videoURL = selectedFileURL else {
-            print("❌ Немає вибраного відеофайлу")
-            return
-        }
-        
-        // Видаляємо попередню GIF перед створенням нової
+    @Published var showVideoPreview = false
+    @Published var selectedFPS: Int = 10
+    @Published var showFPSAlert = false
+    @Published var shouldReturnToEditor = false
+    
+    func deleteGif() {
         if let existingGifURL = gifURL {
             do {
                 try FileManager.default.removeItem(at: existingGifURL)
@@ -42,13 +38,37 @@ class EditorViewModel: ObservableObject {
                 print("⚠️ Помилка видалення попередньої GIF: \(error)")
             }
         }
-        
-        // Очищаємо gifURL, щоб змусити UI оновитися
-        DispatchQueue.main.async {
-            self.gifURL = nil
+        resetToEditorView()
+    }
+    
+    func deleteVideoFile() {
+        if let videoURL = selectedFileURL {
+            do {
+                try FileManager.default.removeItem(at: videoURL)
+                print("🗑 Видалено відеофайл: \(videoURL)")
+            } catch {
+                print("⚠️ Помилка видалення відео: \(error)")
+            }
+        }
+        selectedFileURL = nil
+    }
+    
+    func resetToEditorView() {
+        gifURL = nil
+        selectedFileURL = nil
+        showLoader = false
+        showVideoPreview = false
+        shouldReturnToEditor = true
+    }
+    
+    func convertVideoToGif() {
+        guard let videoURL = selectedFileURL else {
+            print("❌ Немає вибраного відеофайлу")
+            return
         }
         
         showLoader = true
+        showVideoPreview = false
         print("ℹ️ Початок конвертації відео у GIF")
         
         let asset = AVURLAsset(url: videoURL)
@@ -57,31 +77,35 @@ class EditorViewModel: ObservableObject {
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         
-        if let videoTrack = asset.tracks(withMediaType: .video).first {
-            let videoSize = videoTrack.naturalSize
-            if videoSize.width > 0 && videoSize.height > 0 {
-                let maxSize: CGFloat = 500 // Збільшено максимальний розмір для кращої якості
-                let aspectRatio = videoSize.width / videoSize.height
-                
-                let newSize: CGSize
-                if videoSize.width > videoSize.height {
-                    newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
-                } else {
-                    newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
-                }
-                
-                generator.maximumSize = newSize
-                print("ℹ️ Розмір GIF після адаптації: \(newSize.width)x\(newSize.height)")
-            } else {
-                print("⚠️ Попередження: Неможливо отримати розмір відео")
-            }
-        } else {
+        guard let videoTrack = asset.tracks(withMediaType: .video).first else {
             print("⚠️ Попередження: Відеотрек не знайдено")
+            return
         }
         
-        let frameRate: Int = 20 // Збільшено кількість кадрів за секунду для плавності
+        let videoSize = videoTrack.naturalSize
+        let maxSize: CGFloat = 500
+        let aspectRatio = videoSize.width / videoSize.height
+        
+        let newSize: CGSize
+        if videoSize.width > videoSize.height {
+            newSize = CGSize(width: maxSize, height: maxSize / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxSize * aspectRatio, height: maxSize)
+        }
+        
+        generator.maximumSize = newSize
+        print("ℹ️ Розмір GIF після адаптації: \(newSize.width)x\(newSize.height)")
+        
+        let frameRate = selectedFPS
         let duration = CMTimeGetSeconds(asset.duration)
         let totalFrames = Int(duration * Double(frameRate))
+        
+        if totalFrames < 10 {
+            showFPSAlert = true
+            showLoader = false
+            return
+        }
+        
         let delayBetweenFrames: TimeInterval = 1.0 / Double(frameRate)
         
         print("ℹ️ Загальна тривалість відео: \(duration) секунд")
@@ -149,5 +173,11 @@ class EditorViewModel: ObservableObject {
                 }
             }
         }
+    }
+    func saveGif() {
+        guard let gifURL = gifURL else { return }
+
+        CoreDataManager.shared.addToCreatedGifs(gifURL: gifURL.absoluteString)
+        print("✅ GIF збережено в базу даних: \(gifURL.absoluteString)")
     }
 }

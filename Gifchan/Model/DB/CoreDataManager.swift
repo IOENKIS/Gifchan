@@ -79,20 +79,20 @@ class CoreDataManager {
         }
     }
 
-    // 🔹 Додає GIF до SavedGif (Giphy, Uploaded, Created)
-    func addToSavedGifs(gifURL: String, type: String) {
-        guard !isGifSaved(gifURL: gifURL) else { return }
-
-        let newGif = SavedGif(context: context)
+    // 🔹 Додає GIF до збережених GIF (CreatedGif)
+    func addToCreatedGifs(gifURL: String) {
+        guard !isGifCreated(gifURL: gifURL) else { return }
+        
+        let newGif = CreatedGif(context: context)
         newGif.id = UUID().uuidString
         newGif.url = gifURL
-        newGif.type = type
+        newGif.createdAt = Date()
         save()
     }
 
-    // 🔹 Видаляє GIF із SavedGif
-    func removeFromSavedGifs(gifURL: String) {
-        let request: NSFetchRequest<SavedGif> = SavedGif.fetchRequest()
+    // 🔹 Видаляє GIF із CreatedGif
+    func removeFromCreatedGifs(gifURL: String) {
+        let request: NSFetchRequest<CreatedGif> = CreatedGif.fetchRequest()
         request.predicate = NSPredicate(format: "url == %@", gifURL)
         
         do {
@@ -106,40 +106,27 @@ class CoreDataManager {
         }
     }
 
-    // 🔹 Отримує всі SavedGif
-    func fetchSavedGifs() -> [SavedGif] {
-        let request: NSFetchRequest<SavedGif> = SavedGif.fetchRequest()
+    // 🔹 Отримує всі CreatedGif
+    func fetchCreatedGifs() -> [CreatedGif] {
+        let request: NSFetchRequest<CreatedGif> = CreatedGif.fetchRequest()
         do {
             return try context.fetch(request)
         } catch {
-            print("❌ Помилка отримання SavedGif: \(error)")
-            return []
-        }
-    }
-    
-    // 🔹 Отримує GIF за категорією
-    func fetchSavedGifsByType(type: String) -> [SavedGif] {
-        let request: NSFetchRequest<SavedGif> = SavedGif.fetchRequest()
-        request.predicate = NSPredicate(format: "type == %@", type)
-        
-        do {
-            return try context.fetch(request)
-        } catch {
-            print("❌ Помилка отримання GIF за категорією \(type): \(error)")
+            print("❌ Помилка отримання CreatedGif: \(error)")
             return []
         }
     }
 
-    // 🔹 Перевіряє, чи GIF вже є в SavedGif
-    func isGifSaved(gifURL: String) -> Bool {
-        let request: NSFetchRequest<SavedGif> = SavedGif.fetchRequest()
+    // 🔹 Перевіряє, чи GIF вже є у CreatedGif
+    func isGifCreated(gifURL: String) -> Bool {
+        let request: NSFetchRequest<CreatedGif> = CreatedGif.fetchRequest()
         request.predicate = NSPredicate(format: "url == %@", gifURL)
         
         do {
             let count = try context.count(for: request)
             return count > 0
         } catch {
-            print("❌ Помилка перевірки GIF у CoreData: \(error)")
+            print("❌ Помилка перевірки CreatedGif у CoreData: \(error)")
             return false
         }
     }

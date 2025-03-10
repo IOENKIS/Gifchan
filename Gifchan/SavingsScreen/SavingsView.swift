@@ -23,7 +23,7 @@ struct SavingsView: View {
 
                     buttonForSaving(
                         isSelected: !isFavorite,
-                        text: "Savings",
+                        text: "Created",
                         img: "star.fill",
                         process: { isFavorite = false }
                     )
@@ -32,7 +32,7 @@ struct SavingsView: View {
                 if isFavorite {
                     FavoritesView()
                 }else{
-//                    MadeView()
+                    CreatedView()
                 }
             }
             .navigationTitle("Savings")
