@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import AVKit
 import AVFoundation
 import MobileCoreServices
 import ImageIO
@@ -176,8 +175,13 @@ class EditorViewModel: ObservableObject {
     }
     func saveGif() {
         guard let gifURL = gifURL else { return }
-
-        CoreDataManager.shared.addToCreatedGifs(gifURL: gifURL.absoluteString)
-        print("✅ GIF збережено в базу даних: \(gifURL.absoluteString)")
+        
+        do {
+            let gifData = try Data(contentsOf: gifURL)
+            CoreDataManager.shared.addToCreatedGifs(gifData: gifData)
+            print("✅ GIF збережено в базу даних як Data")
+        } catch {
+            print("❌ Помилка збереження GIF у CoreData: \(error)")
+        }
     }
 }

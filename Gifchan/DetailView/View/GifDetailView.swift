@@ -8,13 +8,20 @@
 import SwiftUI
 
 struct GifDetailView: View {
-    let gifURL: String
-    @StateObject private var viewModel = GifDetailViewModel()
+    let gifData: Data?
+    let gifURL: String?
+    @StateObject private var viewModel: GifDetailViewModel
+    
+    init(gifData: Data? = nil, gifURL: String? = nil) {
+        self.gifData = gifData
+        self.gifURL = gifURL
+        _viewModel = StateObject(wrappedValue: GifDetailViewModel(gifData: gifData, gifURL: gifURL))
+    }
 
     var body: some View {
         ZStack{
             VStack {
-                GifImageView(gifURL: gifURL)
+                GifImageView(gifData: gifData, gifURL: gifURL)
                     .frame(width: 300, height: 300)
                     .clipShape(RoundedRectangle(cornerRadius: 15))
                     .shadow(radius: 10)
@@ -23,7 +30,7 @@ struct GifDetailView: View {
                 VStack(spacing: 20) {
                     buttonForDetail(
                         isActive: viewModel.isFavorite,
-                        action: { viewModel.toggleFavorite(for: gifURL) },
+                        action: { viewModel.toggleFavorite() },
                         title: "Add to Favorite",
                         activeIcon: "heart.fill",
                         inactiveIcon: "heart"
@@ -39,8 +46,8 @@ struct GifDetailView: View {
                     
                     buttonForDetail(
                         isActive: false,
-                        action: { viewModel.downloadGif(from: gifURL) },
-                        title: "Download GIF",
+                        action: { viewModel.downloadGif() },
+                        title: "Add to gallery",
                         activeIcon: "arrow.down.circle.fill",
                         inactiveIcon: "arrow.down.circle"
                     )
@@ -88,7 +95,7 @@ struct GifDetailView: View {
         .navigationTitle("GIF Details")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            viewModel.checkIfFavorite(for: gifURL)
+            viewModel.checkIfFavorite()
         }
         .alert(isPresented: $viewModel.showDownloadAlert) {
             Alert(

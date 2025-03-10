@@ -36,14 +36,12 @@ struct FavoritesView: View {
     }
 
     private var favoriteGifList: some View {
-        ForEach(favorites, id: \.id) { gif in
-            if let gifURL = gif.url {
-                NavigationLink(destination: GifDetailView(gifURL: gifURL)) {
-                    GifImageView(gifURL: gifURL)
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(radius: 5)
-                }
+        ForEach(favorites, id: \ .id) { gif in
+            NavigationLink(destination: GifDetailView(gifData: gif.data, gifURL: gif.url)) {
+                GifImageView(gifData: gif.data, gifURL: gif.url)
+                    .frame(maxHeight: 400)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .shadow(radius: 5)
             }
         }
     }

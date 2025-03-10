@@ -11,6 +11,8 @@ struct EditorView: View {
     @StateObject private var viewModel = EditorViewModel()
     @State private var showVideoPicker = false
     @State private var showSaveConfirmation = false
+    @State private var showGifEditor = false
+    
     var body: some View {
         NavigationView {
             VStack {
@@ -18,8 +20,10 @@ struct EditorView: View {
                     ProgressView("GIF processing...")
                         .progressViewStyle(CircularProgressViewStyle())
                         .padding()
+                    Text("This may take a few seconds.")
+                         .foregroundColor(.gray)
                 } else if let gifURL = viewModel.gifURL {
-                    GifImageView(gifURL: gifURL.absoluteString)
+                    GifImageView(gifData: nil, gifURL: gifURL.absoluteString)
                         .frame(width: 400, height: 400)
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .shadow(radius: 5)
@@ -42,6 +46,20 @@ struct EditorView: View {
                          .padding()
                         
                         Button(action: {
+                            showGifEditor = true
+                         }) {
+                             RoundedRectangle(cornerRadius: 15)
+                                 .stroke(Color.stroke, lineWidth: 2)
+                                 .frame(height: 50)
+                                 .overlay(
+                                    Text("Edit")
+                                         .foregroundColor(.stroke)
+                                         .padding()
+                                 )
+                         }
+                         .padding()
+                        
+                        Button(action: {
                             viewModel.deleteGif()
                          }) {
                              RoundedRectangle(cornerRadius: 15)
@@ -55,7 +73,12 @@ struct EditorView: View {
                          }
                          .padding()
                     }
+                    NavigationLink(destination: GifEditorView(gifData: try? Data(contentsOf: gifURL), gifURL: nil), isActive: $showGifEditor) { EmptyView() }
                 } else {
+                    Text("Choose a GIF or video")
+                         .foregroundColor(.gray)
+                         .padding()
+                    
                     Button(action: {
                         showVideoPicker = true
                      }) {

@@ -22,7 +22,12 @@ struct CreatedView: View {
             } else {
                 ScrollView {
                     VStack {
-                        createdGifList
+                        ForEach(createdGifs.sorted(by: { ($0.createdAt ?? Date.distantPast) > ($1.createdAt ?? Date.distantPast) }), id: \..id) { gif in
+                            NavigationLink(destination: GifDetailView(gifData: gif.data)) {
+                                LongPressToDeleteView(gif: gif, deleteAction: deleteGif)
+                                    .contentShape(Rectangle())
+                            }
+                        }
                     }
                     .padding()
                 }
@@ -34,16 +39,35 @@ struct CreatedView: View {
         }
     }
     
-    private var createdGifList: some View {
-        ForEach(createdGifs.sorted(by: { ($0.createdAt ?? Date.distantPast) > ($1.createdAt ?? Date.distantPast) }), id: \.id) { gif in
-            if let gifURL = gif.url {
-                NavigationLink(destination: GifDetailView(gifURL: gifURL)) {
-                    GifImageView(gifURL: gifURL)
-                        .frame(height: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(radius: 5)
-                }
+    private func deleteGif(_ gif: CreatedGif) {
+        CoreDataManager.shared.removeFromCreatedGifs(gif)
+        createdGifs = CoreDataManager.shared.fetchCreatedGifs()
+    }
+}
+
+struct LongPressToDeleteView: View {
+    let gif: CreatedGif
+    let deleteAction: (CreatedGif) -> Void
+    @State private var showDeleteAlert = false
+    
+    var body: some View {
+        GifImageView(gifData: gif.data, gifURL: nil)
+            .frame(maxHeight: 400)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .shadow(radius: 5)
+            .contentShape(Rectangle())
+            .onLongPressGesture {
+                showDeleteAlert = true
             }
-        }
+            .alert(isPresented: $showDeleteAlert) {
+                Alert(
+                    title: Text("Delete GIF"),
+                    message: Text("Are you sure you want to delete this GIF?"),
+                    primaryButton: .destructive(Text("Delete")) {
+                        deleteAction(gif)
+                    },
+                    secondaryButton: .cancel()
+                )
+            }
     }
 }

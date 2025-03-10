@@ -29,12 +29,7 @@ struct GifSectionView: View {
                             }
                         } else {
                             ForEach(gifURLs, id: \.self) { url in
-                                NavigationLink(destination: GifDetailView(gifURL: url)) {
-                                    GifImageView(gifURL: url)
-                                        .frame(height: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 5)
-                                }
+                                gifView(for: url)
                             }
                         }
                     }
@@ -53,6 +48,16 @@ struct GifSectionView: View {
         .padding(.vertical, 15)
         .onDisappear {
             GifImageView.cache.removeAllObjects()
+        }
+    }
+
+    @ViewBuilder
+    private func gifView(for url: String) -> some View {
+        NavigationLink(destination: GifDetailView(gifURL: url)) {
+            GifImageView(gifData: nil, gifURL: url)
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(radius: 5)
         }
     }
 }

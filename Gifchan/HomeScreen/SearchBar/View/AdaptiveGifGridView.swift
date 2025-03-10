@@ -20,7 +20,7 @@ struct AdaptiveGifGridView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
                 ForEach(gifData, id: \.id) { gif in
                     NavigationLink(destination: GifDetailView(gifURL: gif.images.fixedHeight.url)) {
-                        GifImageView(gifURL: gif.images.fixedHeight.url)
+                        GifImageView(gifData: nil, gifURL: gif.images.fixedHeight.url)
                             .frame(width: gifSize, height: gifSize)
                             .aspectRatio(contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
