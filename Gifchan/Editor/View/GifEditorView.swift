@@ -97,7 +97,8 @@ struct GifEditorView: View {
             
             Button("Зберегти GIF") {
                 viewModel.gifData = gifData
-                viewModel.saveGifWithText()
+                viewModel.gifUrl = URL(string: gifURL ?? "")
+                viewModel.prepareGifForEditing()
             }
             .padding()
             .alert(isPresented: $viewModel.showSaveAlert) {

@@ -10,7 +10,6 @@ import PhotosUI
 
 class GifDetailViewModel: ObservableObject {
     @Published var isFavorite: Bool = false
-    @Published var isReference: Bool = false
     @Published var isLoading: Bool = false
     @Published var showDownloadAlert: Bool = false
     @Published var showDownloadToast: Bool = false
@@ -38,10 +37,6 @@ class GifDetailViewModel: ObservableObject {
                 CoreDataManager.shared.removeFromFavorites(gifURL: gifURL)
             }
         }
-    }
-
-    func toggleReference() {
-        isReference.toggle()
     }
     
     func downloadGif() {

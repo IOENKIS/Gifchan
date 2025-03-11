@@ -50,4 +50,8 @@ struct GifImageView: UIViewRepresentable {
             }
         }
     }
+    static func clearCache() {
+        cache.removeAllObjects()
+        print("🗑 GIF кеш очищено")
+    }
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CreatedView: View {
     @State private var createdGifs: [CreatedGif] = []
-    
+
     var body: some View {
         VStack {
             if createdGifs.isEmpty {
@@ -22,10 +22,12 @@ struct CreatedView: View {
             } else {
                 ScrollView {
                     VStack {
-                        ForEach(createdGifs.sorted(by: { ($0.createdAt ?? Date.distantPast) > ($1.createdAt ?? Date.distantPast) }), id: \..id) { gif in
+                        ForEach(createdGifs.sorted(by: { ($0.createdAt ?? Date.distantPast) > ($1.createdAt ?? Date.distantPast) }), id: \.id) { gif in
                             NavigationLink(destination: GifDetailView(gifData: gif.data)) {
                                 LongPressToDeleteView(gif: gif, deleteAction: deleteGif)
                                     .contentShape(Rectangle())
+                                    .transition(.scale) // Додаємо ефект зникнення
+                                    .animation(.easeInOut(duration: 0.3), value: createdGifs) // Анімація видалення
                             }
                         }
                     }
@@ -38,10 +40,17 @@ struct CreatedView: View {
             createdGifs = CoreDataManager.shared.fetchCreatedGifs()
         }
     }
-    
+
     private func deleteGif(_ gif: CreatedGif) {
-        CoreDataManager.shared.removeFromCreatedGifs(gif)
-        createdGifs = CoreDataManager.shared.fetchCreatedGifs()
+        // Видаляємо анімовано
+        withAnimation {
+            createdGifs.removeAll { $0.id == gif.id }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            CoreDataManager.shared.removeFromCreatedGifs(gif)
+            createdGifs = CoreDataManager.shared.fetchCreatedGifs()
+        }
     }
 }
 

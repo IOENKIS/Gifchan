@@ -10,6 +10,7 @@ import SwiftUI
 struct GifDetailView: View {
     let gifData: Data?
     let gifURL: String?
+    @State private var navigateToEditor = false
     @StateObject private var viewModel: GifDetailViewModel
     
     init(gifData: Data? = nil, gifURL: String? = nil) {
@@ -37,8 +38,8 @@ struct GifDetailView: View {
                     )
                     
                     buttonForDetail(
-                        isActive: viewModel.isReference,
-                        action: { viewModel.toggleReference() },
+                        isActive: navigateToEditor,
+                        action: { navigateToEditor = true },
                         title: "Take as Reference",
                         activeIcon: "pencil.circle.fill",
                         inactiveIcon: "pencil.circle"
@@ -97,6 +98,12 @@ struct GifDetailView: View {
         .onAppear {
             viewModel.checkIfFavorite()
         }
+        .background(
+            NavigationLink(
+                destination: GifEditorView(gifData: gifData, gifURL: gifURL),
+                isActive: $navigateToEditor
+            ) { EmptyView() }
+        )
         .alert(isPresented: $viewModel.showDownloadAlert) {
             Alert(
                 title: Text("Download Complete"),

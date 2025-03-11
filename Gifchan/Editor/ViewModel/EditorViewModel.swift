@@ -37,19 +37,8 @@ class EditorViewModel: ObservableObject {
                 print("⚠️ Помилка видалення попередньої GIF: \(error)")
             }
         }
-        resetToEditorView()
-    }
-    
-    func deleteVideoFile() {
-        if let videoURL = selectedFileURL {
-            do {
-                try FileManager.default.removeItem(at: videoURL)
-                print("🗑 Видалено відеофайл: \(videoURL)")
-            } catch {
-                print("⚠️ Помилка видалення відео: \(error)")
-            }
-        }
         selectedFileURL = nil
+        resetToEditorView()
     }
     
     func resetToEditorView() {
@@ -58,6 +47,7 @@ class EditorViewModel: ObservableObject {
         showLoader = false
         showVideoPreview = false
         shouldReturnToEditor = true
+        GifImageView.clearCache()
     }
     
     func convertVideoToGif() {
@@ -183,5 +173,6 @@ class EditorViewModel: ObservableObject {
         } catch {
             print("❌ Помилка збереження GIF у CoreData: \(error)")
         }
+        resetToEditorView()
     }
 }

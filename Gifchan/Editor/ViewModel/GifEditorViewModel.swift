@@ -12,6 +12,7 @@ import UniformTypeIdentifiers
 
 class GifEditorViewModel: ObservableObject {
     @Published var gifData: Data?
+    @Published var gifUrl: URL?
     @Published var text = "Your text"
     @Published var textColor = Color.white
     @Published var fontSize: CGFloat = 24
@@ -22,7 +23,46 @@ class GifEditorViewModel: ObservableObject {
     @Published var showSaveAlert = false
     @Published var shouldReturnToEditor = false
     @Published var gifSize: CGSize = .zero
+    private var temporaryGifURL: URL?
     
+    func prepareGifForEditing() {
+        print("🔍 Перевіряємо вхідні дані...")
+        print("🎞 gifData: \(gifData != nil ? "✅ Є" : "❌ Немає")")
+        print("🌐 gifUrl: \(gifUrl?.absoluteString ?? "❌ Немає")")
+
+        if let gifData = gifData {
+            print("✅ GIF уже завантажений, починаємо обробку")
+            saveGifWithText()
+            return
+        }
+
+        guard let gifUrl = gifUrl else {
+            print("❌ Немає ні `gifData`, ні `gifUrl`, не можемо продовжити")
+            return
+        }
+
+        print("⏳ Завантаження GIF з URL: \(gifUrl) у тимчасову директорію...")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let downloadedGifData = try Data(contentsOf: gifUrl)
+                
+                let tempGifURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_gif.gif")
+                try downloadedGifData.write(to: tempGifURL)
+
+                DispatchQueue.main.async {
+                    self.temporaryGifURL = tempGifURL
+                    self.gifData = downloadedGifData
+                    print("✅ GIF завантажено у тимчасову директорію: \(tempGifURL)")
+
+                    self.saveGifWithText()
+                }
+            } catch {
+                print("❌ Помилка завантаження GIF: \(error)")
+            }
+        }
+    }
+
     func saveGifWithText() {
         guard let gifData = gifData else {
             print("❌ Немає даних GIF для обробки")
@@ -65,6 +105,13 @@ class GifEditorViewModel: ObservableObject {
                 let savedGifData = try Data(contentsOf: gifDestinationURL)
                 CoreDataManager.shared.addToCreatedGifs(gifData: savedGifData)
                 print("✅ GIF збережено в базу даних")
+
+                // Видаляємо тимчасовий файл, якщо він є
+                if let tempURL = self.temporaryGifURL {
+                    try FileManager.default.removeItem(at: tempURL)
+                    print("🗑 Видалено тимчасовий GIF-файл: \(tempURL)")
+                }
+
                 DispatchQueue.main.async {
                     self.showSaveAlert = true
                     self.shouldReturnToEditor = true
@@ -96,30 +143,12 @@ class GifEditorViewModel: ObservableObject {
             return nil
         }
 
-        // Малюємо вихідне зображення
         context.draw(cgImage, in: CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
 
         print("📍 Позиція тексту (до трансформацій): \(position.width), \(position.height)")
 
-        // Фіксимо переворот тексту
         context.translateBy(x: 0, y: imageHeight)
         context.scaleBy(x: 1.0, y: -1.0)
-
-        // Обчислюємо нові координати тексту
-        let adjustedX = (imageWidth / 2) + position.width
-        let adjustedY = (imageHeight / 2) + position.height
-
-        let textSize = textBoundingRect()
-        
-        let textRect = CGRect(
-            x: adjustedX - textSize.width / 2,
-            y: adjustedY - textSize.height / 2,
-            width: textSize.width,
-            height: textSize.height
-        )
-        
-        print("📝 Розмір тексту: \(textSize.width)x\(textSize.height)")
-        print("📍 Остаточна позиція тексту: \(textRect.origin.x), \(textRect.origin.y)")
 
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont(name: selectedFont, size: fontSize) ?? UIFont.systemFont(ofSize: fontSize),
@@ -127,6 +156,25 @@ class GifEditorViewModel: ObservableObject {
         ]
         
         let attributedText = NSAttributedString(string: text, attributes: attributes)
+        let textSize = attributedText.boundingRect(
+            with: CGSize(width: imageWidth, height: .greatestFiniteMagnitude),
+            options: .usesLineFragmentOrigin,
+            context: nil
+        ).size
+
+        // Центруємо текст відповідно до заданої позиції
+        let adjustedX = (imageWidth / 2) + position.width - textSize.width / 2
+        let adjustedY = (imageHeight / 2) + position.height - textSize.height / 2
+
+        let textRect = CGRect(
+            x: adjustedX,
+            y: adjustedY,
+            width: textSize.width,
+            height: textSize.height
+        )
+        
+        print("📝 Розмір тексту: \(textSize.width)x\(textSize.height)")
+        print("📍 Остаточна позиція тексту: \(textRect.origin.x), \(textRect.origin.y)")
 
         UIGraphicsPushContext(context)
         attributedText.draw(in: textRect)
@@ -134,6 +182,7 @@ class GifEditorViewModel: ObservableObject {
 
         return context.makeImage()
     }
+
     
     func textBoundingRect() -> CGRect {
         let textWidth = fontSize * CGFloat(text.count) * 0.6
